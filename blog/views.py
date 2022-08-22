@@ -1,5 +1,6 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, reverse
 from django.views import generic, View
+from django.http import HttpResponseRedirect
 from .models import Post
 from .forms import CommentForm
 
@@ -29,11 +30,12 @@ class PostDetail(View):
             {
                 "post": post,
                 "comments": comments,
+                "commented": False,
                 "liked": liked,
                 "comment_form": CommentForm()
             }
         )
-
+    # to allow logged-in users to leave comments on our blog posts 
     def post(self, request, slug, *args, **kwargs):
 
         queryset = Post.objects.filter(status=1)
@@ -64,3 +66,16 @@ class PostDetail(View):
                 "liked": liked
             },
         )
+
+# Allows logged-in users to leave like or unlike blog posts
+class PostLike(View):
+
+    def post(self, request, slug):
+        post = get_object_or_404(Post, slug=slug)
+        
+        if post.likes.filter(id=request.user.id).exists():
+            post.likes.remove(request.user)
+        else:
+            post.likes.add(request.user)
+        
+        return HttpResponseRedirect(reverse('post_detail',  args=[slug]))
